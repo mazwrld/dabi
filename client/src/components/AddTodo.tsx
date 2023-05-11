@@ -1,9 +1,13 @@
-import { Button, Group, Modal } from '@mantine/core';
+import { Button, Group, Modal, TextInput, Textarea } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { useDisclosure } from '@mantine/hooks';
+import { KeyedMutator } from 'swr';
+import { Todo } from '../types/Todo';
+import { ENDPOINT } from '../utils/endpoint';
 
-function AddTodo() {
+function AddTodo({ mutate }: { mutate: KeyedMutator<Todo[]> }) {
   const [opened, { open, close }] = useDisclosure(false);
+
   const form = useForm({
     initialValues: {
       title: '',
@@ -11,30 +15,51 @@ function AddTodo() {
     },
   });
 
+  async function createTodo(values: { title: string; body: string }) {
+    const updated = await fetch(`${ENDPOINT}/api/todos`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(values),
+    }).then((r) => r.json());
+
+    mutate(updated);
+    form.reset();
+    close();
+  }
+
   return (
     <>
       <Modal
         opened={opened}
         onClose={close}
-        title='Create A todo item'
-        centered
+        withCloseButton={false}
+        title='Create todo'
       >
-        <form
-          onSubmit={form.onSubmit(() => {
-            console.log(form.values);
-            close();
-          })}
-        >
-          <Group position='center'>
-            <Button type='submit' variant='light'>
-              Create
-            </Button>
-          </Group>
+        <form onSubmit={form.onSubmit(createTodo)}>
+          <TextInput
+            required
+            mb={12}
+            label='Todo'
+            placeholder='What do you want to do?'
+            {...form.getInputProps('title')}
+          />
+          <Textarea
+            required
+            mb={12}
+            label='Body'
+            placeholder='Tell me more...'
+            {...form.getInputProps('body')}
+          />
+
+          <Button type='submit'>Create todo</Button>
         </form>
       </Modal>
+
       <Group position='center'>
         <Button fullWidth mb={12} onClick={open}>
-          Add to todo
+          Create todo
         </Button>
       </Group>
     </>
